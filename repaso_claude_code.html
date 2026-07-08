@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Estudio — Claude Code 101</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style> html, body { margin: 0; background: #f4f6f9; } * { box-sizing: border-box; } </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+const DECK = [
+  // Lección 1 — ¿Qué es Claude Code?
+  { lesson: "Qué es Claude Code", q: "¿Qué es Claude Code?", hint: "Una herramienta de programación que actúa como agente.", a: "Una herramienta de programación agéntica que entiende tu codebase, edita tus archivos, ejecuta comandos y se integra con tus herramientas de desarrollo." },
+  { lesson: "Qué es Claude Code", q: "¿Dónde puedes usar Claude Code?", hint: "Terminal y varios editores, más la app y la web.", a: "En tu terminal, Visual Studio Code, la app de escritorio de Claude, la web y los IDEs de JetBrains." },
+  { lesson: "Qué es Claude Code", q: "¿Qué lo diferencia de Claude.ai?", hint: "No copias y pegas: él entra y lo hace.", a: "Tiene acceso directo a tus archivos, tu terminal y tu codebase completo, así que hace el trabajo él mismo en vez de copiar y pegar de ida y vuelta." },
+  { lesson: "Qué es Claude Code", q: "¿Qué es un agente (AI Agent)?", hint: "Software que actúa en su entorno para lograr una meta.", a: "Software que interactúa con su entorno y realiza acciones para cumplir un objetivo, con un modelo de lenguaje operando en un bucle en tiempo real." },
+  { lesson: "Qué es Claude Code", q: "¿Qué puede usar un agente para lograr su meta?", hint: "No está solo: tiene ayudantes.", a: "Herramientas, servicios externos e incluso otros agentes." },
+  { lesson: "Qué es Claude Code", q: "Las cuatro cosas que Claude Code puede hacer", hint: "Leer, editar, ejecutar y buscar.", a: "Leer y entender tu codebase, editar archivos en todo el proyecto, ejecutar comandos de terminal, y buscar documentación en la web." },
+  { lesson: "Qué es Claude Code", q: "¿Qué es la ventana de contexto?", hint: "Su memoria de trabajo, que no es infinita.", a: "La memoria de trabajo de Claude: guarda mucho pero no todo a la vez. Por eso, de forma agéntica, busca respuestas en tu código sin cargarlo entero." },
+  { lesson: "Qué es Claude Code", q: "¿Qué pasa antes de ejecutar comandos o hacer cambios?", hint: "Tú mantienes el control.", a: "Por defecto pide permiso antes de ejecutar comandos o hacer cambios, así que siempre tienes el control." },
+  { lesson: "Qué es Claude Code", q: "¿Claude Code es perfecto?", hint: "Como toda herramienta, no.", a: "No: puede malinterpretar tu intención, introducir un bug o sobre-complicar una solución. Mantenerte al tanto ayuda a detectarlo pronto." },
+
+  // Lección 2 — El bucle agéntico
+  { lesson: "El bucle agéntico", q: "¿Cuáles son los pasos del bucle agéntico?", hint: "Prompt, contexto, acción, verificar, repetir.", a: "Escribes un prompt; Claude reúne contexto vía el modelo; toma acción (editar/ejecutar); verifica los resultados; si logran la meta termina, si no vuelve a intentar hasta que sea completo y verificable." },
+  { lesson: "El bucle agéntico", q: "¿Qué puedes hacer durante el bucle?", hint: "No eres un espectador pasivo.", a: "Añadir contexto, interrumpir o redirigir al modelo para guiarlo hacia tu meta." },
+  { lesson: "El bucle agéntico", q: "En el bucle, ¿qué devuelve el modelo?", hint: "Dos posibilidades, una de ellas ejecutable.", a: "Texto, o una llamada a herramienta (tool call) que Claude Code puede ejecutar." },
+  { lesson: "El bucle agéntico", q: "¿Qué hace único a Claude Code frente a un chat?", hint: "No solo responde: hace y comprueba.", a: "Lee tu codebase, toma acción y verifica su propio trabajo dentro de un bucle, combinando bucle agéntico, contexto gestionado, herramientas y permisos." },
+  { lesson: "El bucle agéntico", q: "¿Qué es 'compactar' el contexto?", hint: "Qué pasa al llegar al límite de la ventana.", a: "Cuando llegas al límite de la ventana de contexto, Claude Code decide automáticamente qué eliminar o resumir para volver a un tamaño usable." },
+  { lesson: "El bucle agéntico", q: "¿Por qué las herramientas son la columna vertebral de un agente?", hint: "La diferencia entre 'texto→texto' y actuar.", a: "La mayoría de asistentes solo reciben y devuelven texto; las herramientas permiten a Claude Code ejecutar acciones (leer archivos, buscar en la web…) para completar tareas." },
+  { lesson: "El bucle agéntico", q: "¿Cómo decide Claude Code cuándo usar una herramienta?", hint: "Entiende el significado, no sigue una regla fija.", a: "Usa comprensión semántica para determinar cuándo llamar a una herramienta y cómo usar su resultado." },
+  { lesson: "El bucle agéntico", q: "Los tres modos de permiso", hint: "Preguntar todo, auto-editar, o solo planear.", a: "Por defecto (pide permiso para editar o ejecutar), auto-aceptar (edita sin preguntar, pero los comandos sí requieren aprobación) y modo plan (solo lectura para armar un plan antes de actuar)." },
+
+  // Lección 3 — Instalación (solo lo conceptual)
+  { lesson: "Instalación", q: "¿A qué archivos accede Claude Code al ejecutarlo?", hint: "Depende de dónde lo corras.", a: "Al directorio donde ejecutas el comando 'claude' y todas sus subcarpetas." },
+  { lesson: "Instalación", q: "¿Con qué puedes iniciar sesión en Claude Code?", hint: "Una cuenta de pago… o una llave.", a: "Con tu cuenta de Claude (Pro, Max o Enterprise) o usando una API key. Si tu organización tiene cuenta Enterprise, elige esa opción." },
+  { lesson: "Instalación", q: "¿Qué entorno recibe las funciones nuevas primero?", hint: "El más 'cutting edge'.", a: "El terminal: las novedades llegan ahí primero. Las integraciones con IDE ofrecen una experiencia casi idéntica." },
+  { lesson: "Instalación", q: "¿En qué se diferencian Desktop y Web para Claude Code?", hint: "Uno corre en segundo plano; el otro solo con GitHub.", a: "Desktop sirve para dejar a Claude corriendo en segundo plano mientras haces otras cosas; la Web (claude.ai/code) te limita a trabajar sobre repositorios de GitHub." },
+
+  // Lección 4 — Tu primer prompt
+  { lesson: "Tu primer prompt", q: "¿Cómo cambias entre modos de permiso mientras trabajas?", hint: "Un atajo de teclado que cicla.", a: "Con Shift + Tab, que cicla entre modo aprobación, auto-aceptar y Modo Plan." },
+  { lesson: "Tu primer prompt", q: "¿Qué hace el Modo Plan?", hint: "Investiga con solo lectura antes de tocar código.", a: "Toma tu prompt, usa herramientas de solo lectura para analizar tu codebase e investigar la implementación, hace preguntas aclaratorias y devuelve un plan detallado antes de ejecutar." },
+  { lesson: "Tu primer prompt", q: "¿Cuándo brilla el Modo Plan?", hint: "Cambios grandes o revisar sin riesgo.", a: "Para planear cambios complejos, implementaciones de varios pasos hacia una funcionalidad, o hacer una revisión de código segura." },
+  { lesson: "Tu primer prompt", q: "¿Cómo es un buen prompt en Claude Code?", hint: "Mientras más claro, mejor.", a: "Lo más descriptivo posible: di qué quieres, dónde lo quieres y da contexto relevante (por ejemplo, que respete tu tema existente)." },
+
+  // Lección 5 — Explore → Plan → Code → Commit
+  { lesson: "Explore→Plan→Code→Commit", q: "¿Cuál es EL flujo de trabajo clave del curso?", hint: "Cuatro fases, en orden.", a: "Explore → Plan → Code → Commit (Explorar, Planear, Codificar, Confirmar). Es lo más importante que llevarte del curso." },
+  { lesson: "Explore→Plan→Code→Commit", q: "¿Qué problema evita este flujo?", hint: "El error de saltar directo a…", a: "Evita saltar directo a pedir código, que obliga a corregir mucho más el rumbo después." },
+  { lesson: "Explore→Plan→Code→Commit", q: "¿Por qué el Modo Plan es el mejor momento para corregir?", hint: "Por lo que aún NO ha pasado.", a: "Porque es antes de que se escriba una sola línea de código: corriges el enfoque sin deshacer trabajo." },
+  { lesson: "Explore→Plan→Code→Commit", q: "¿Qué es el subagente de exploración?", hint: "Un resumen del codebase sin intención de cambiar.", a: "Un subagente que puedes correr (incluso fuera del Modo Plan) para obtener un resumen general de tu codebase cuando solo quieres entenderlo, sin hacer cambios." },
+  { lesson: "Explore→Plan→Code→Commit", q: "Los tres consejos de la fase Code", hint: "Criterio de éxito, herramientas, tests.", a: "Define un criterio de éxito explícito, añade herramientas que ayuden a Claude (como Claude in Chrome para probar UI), e incluye una suite de tests confiable para validar." },
+  { lesson: "Explore→Plan→Code→Commit", q: "¿Para qué sirve el archivo CLAUDE.md aquí?", hint: "Para que no tropiece dos veces con lo mismo.", a: "Si Claude choca repetidamente con el mismo problema, puedes pedirle que guarde la solución en su CLAUDE.md para recordarla." },
+  { lesson: "Explore→Plan→Code→Commit", q: "¿Qué haces antes de confirmar (commit)?", hint: "Ojos frescos, sin el sesgo de la sesión.", a: "Corres un subagente revisor de código, que da una mirada fresca sin el sesgo del agente principal; luego pides un mensaje de commit en tu estilo." },
+
+  // Lección 6 — Gestión del contexto
+  { lesson: "Gestión del contexto", q: "¿Qué ocupa espacio en la ventana de contexto?", hint: "Prácticamente todo lo que ocurre.", a: "Todo: cada archivo que Claude lee, cada comando que corre, cada resultado de herramienta y cada mensaje tuyo." },
+  { lesson: "Gestión del contexto", q: "¿Qué hace la compactación y qué riesgo tiene?", hint: "Resume para liberar… pero no es gratis.", a: "Al acercarse al límite, resume detalles importantes y elimina resultados de herramientas innecesarios para liberar espacio; puede perder algunos detalles en el proceso." },
+  { lesson: "Gestión del contexto", q: "¿Qué hacen /compact, /clear y /context?", hint: "Resumir, borrar todo, y ver el estado.", a: "/compact resume todo hasta ese punto conservando memoria; /clear empieza de cero sin memoria previa; /context muestra el tamaño y qué categorías ocupan más espacio." },
+  { lesson: "Gestión del contexto", q: "¿Cuándo usar /compact vs /clear?", hint: "Seguir la misma feature vs empezar otra.", a: "/compact cuando sigues en la misma funcionalidad y chocas con el límite; /clear cuando empiezas una funcionalidad nueva y no quieres que lo anterior meta sesgo." },
+  { lesson: "Gestión del contexto", q: "¿Por qué un prompt vago cuesta más contexto?", hint: "Obliga a Claude a hacer más por su cuenta.", a: "Sin instrucciones claras, Claude debe explorar más tu codebase y razonar por su cuenta, lo que consume mucho más espacio que un prompt detallado." },
+  { lesson: "Gestión del contexto", q: "¿Cómo ayudan los subagentes a ahorrar contexto?", hint: "Ventana aparte; te devuelven solo lo justo.", a: "Corren en paralelo con una ventana de contexto separada; hacen la tarea y devuelven solo un resumen, manteniendo limpio tu contexto principal." },
+
+  // Lección 7 — Code Review y flujo de git
+  { lesson: "Code Review y git", q: "Al crear un subagente revisor, ¿a qué debes restringirlo?", hint: "Debe señalar, no tocar.", a: "A herramientas de solo lectura: un revisor debe marcar problemas, no editar archivos." },
+  { lesson: "Code Review y git", q: "¿Por qué guardar la configuración del subagente revisor en el repo?", hint: "Para que no sea solo tuyo.", a: "Para que todo tu equipo use el mismo revisor, con criterios consistentes." },
+  { lesson: "Code Review y git", q: "¿Qué hace la Skill /commit-push-pr?", hint: "Tres pasos de git en uno.", a: "Maneja el commit, el push y la creación del PR en un solo paso, en vez de hacer cada uno manualmente." },
+  { lesson: "Code Review y git", q: "¿Qué pasa si tienes Slack (MCP) configurado con /commit-push-pr?", hint: "El equipo se entera solo.", a: "Publica automáticamente el enlace del PR en el canal de tu equipo, según los canales listados en tu CLAUDE.md." },
+  { lesson: "Code Review y git", q: "¿Para qué sirve claude --from-pr <número>?", hint: "Volver a un PR donde lo dejaste.", a: "Retoma una sesión vinculada a ese PR (creado con gh pr create), útil para atender comentarios de revisión o arreglar un build que falla." },
+
+  // Lección 8 — El archivo CLAUDE.md
+  { lesson: "CLAUDE.md", q: "¿Qué es el archivo CLAUDE.md y qué problema resuelve?", hint: "Memoria persistente; evita empezar de cero.", a: "Un Markdown en la raíz del proyecto que Claude lee automáticamente cada sesión. Evita que re-explore todo desde cero; es como un script de onboarding para tu codebase." },
+  { lesson: "CLAUDE.md", q: "¿Qué suele contener un CLAUDE.md?", hint: "Stack, comandos, estilo.", a: "La descripción del proyecto y su stack, los comandos clave (dev, tests, lint) y las convenciones de estilo de código." },
+  { lesson: "CLAUDE.md", q: "¿Qué pasa con el contenido del CLAUDE.md?", hint: "Se suma a algo que ya envías.", a: "Se añade (append) a tu prompt, y Claude Code lo lee automáticamente al iniciar cada sesión." },
+  { lesson: "CLAUDE.md", q: "La jerarquía: CLAUDE.md de proyecto vs de usuario", hint: "Uno para el equipo, otro solo para ti.", a: "El de proyecto vive en la raíz y se comparte con el equipo (versionado); el de usuario vive en tu carpeta de configuración, es solo tuyo y aplica a todos tus proyectos." },
+  { lesson: "CLAUDE.md", q: "¿Cómo referencias otros documentos del proyecto?", hint: "Un símbolo y la ruta.", a: "Con el símbolo @ seguido de la ruta del archivo, por ejemplo @README.md, para que Claude lo consulte." },
+  { lesson: "CLAUDE.md", q: "¿Por qué empezar SIN CLAUDE.md y qué hace /init?", hint: "Ver dónde corriges; luego generarlo.", a: "Empezar sin él te muestra dónde corriges constantemente, así queda compacto y enfocado. Cuando estés listo, /init hace que Claude genere uno por ti." },
+
+  // Lección 9 — Subagentes
+  { lesson: "Subagentes", q: "¿Qué es un subagente y qué lo hace especial?", hint: "Trabaja en paralelo, en su propia memoria.", a: "Un agente al que Claude delega tareas; corre en paralelo con su propia ventana de contexto aislada, mejorando tu gestión del contexto." },
+  { lesson: "Subagentes", q: "¿Cómo mantiene limpio tu contexto principal?", hint: "Hace el viaje, te trae solo el destino.", a: "Hace todo el trabajo (p. ej. explorar el codebase) en su ventana y devuelve solo un resumen de sus hallazgos, sin ensuciar tu contexto con todo el proceso." },
+  { lesson: "Subagentes", q: "¿Cómo se definen y cómo creas uno fácilmente?", hint: "Markdown + YAML; un comando lo genera.", a: "Se definen en archivos Markdown con frontmatter YAML. Lo más fácil: correr /agents y 'Create new agent', eligiendo alcance, propósito, herramientas y color." },
+  { lesson: "Subagentes", q: "¿Qué es la memoria persistente en un subagente?", hint: "Una libreta de notas que conserva entre ejecuciones.", a: "Una función opcional que hace que el subagente conserve lo relevante entre conversaciones. Por defecto cada ejecución empieza en blanco; con memoria persistente, retoma lo aprendido antes. Ideal si lo usas en los mismos proyectos." },
+  { lesson: "Subagentes", q: "Ventana de contexto vs. memoria persistente (¿en qué difieren?)", hint: "Una es 'durante'; la otra, 'entre'.", a: "La ventana de contexto es la memoria de trabajo DURANTE una ejecución (fresca cada vez). La memoria persistente es una libreta que se conserva ENTRE ejecuciones y se reincorpora al empezar la siguiente." },
+  { lesson: "Subagentes", q: "Por defecto, ¿un subagente recuerda ejecuciones anteriores?", hint: "La amnesia es a propósito.", a: "No: por defecto cada ejecución arranca con una ventana de contexto nueva y vacía, y se descarta al terminar. Esa amnesia es lo que mantiene limpio tu contexto principal. Solo recuerda si le activas memoria persistente." },
+  { lesson: "Subagentes", q: "¿Cómo precargas Skills en un subagente y qué matiz tiene?", hint: "Una clave 'skill'… y se carga entera.", a: "Añades la clave 'skill' y listas las Skills por nombre. A diferencia de la conversación principal, aquí la Skill completa se carga en el contexto." },
+
+  // Lección 10 — Skills en Claude Code
+  { lesson: "Skills (Code)", q: "¿Cómo decide Claude cuándo activar una Skill?", hint: "Compara tu petición con algo del archivo.", a: "Compara tu solicitud con las descripciones de las Skills disponibles y activa automáticamente las que coinciden. Por eso la descripción es tan importante." },
+  { lesson: "Skills (Code)", q: "Los dos niveles de almacenamiento de Skills", hint: "Personales te siguen; de proyecto se comparten.", a: "Personales en ~/.claude/skills (te siguen en todos tus proyectos, preferencias personales) y de proyecto en .claude/skills en la raíz del repo (compartidas con quien lo clone)." },
+  { lesson: "Skills (Code)", q: "Skills vs. CLAUDE.md: ¿la diferencia clave?", hint: "Bajo demanda vs. siempre cargado.", a: "CLAUDE.md carga sus instrucciones en cada conversación (ocupa contexto); las Skills se cargan bajo demanda: solo nombre y descripción para decidir, y el resto solo si se activan." },
+  { lesson: "Skills (Code)", q: "Skills vs. comandos slash: ¿la diferencia clave?", hint: "Automático vs. tú lo invocas.", a: "Los comandos slash los invocas manualmente; las Skills son automáticas: Claude las reconoce y aplica según el contexto." },
+  { lesson: "Skills (Code)", q: "La 'regla de oro' de cuándo escribir una Skill", hint: "Cuando te repites una y otra vez.", a: "Si te encuentras explicando lo mismo a Claude una y otra vez, eso es una Skill esperando ser escrita." },
+  { lesson: "Skills (Code)", q: "¿Qué es un comando slash y en qué se diferencia de un prompt?", hint: "Acción de la herramienta vs. petición al modelo.", a: "Una instrucción manual que escribes con '/' para que Claude Code ejecute una acción de la aplicación (no una tarea de razonamiento). Un prompt es una petición al modelo; el comando es una acción de la herramienta." },
+  { lesson: "Skills (Code)", q: "¿Puedes pedir por prompt (sin slash) lo mismo que un comando?", hint: "Depende de si toca la sesión o es una tarea.", a: "Si el comando manipula la sesión (contexto, conexiones: /clear, /compact, /mcp), necesitas el slash. Si solo automatiza una tarea que Claude ya sabe hacer (como /init crear un CLAUDE.md), muchas veces puedes pedirla por prompt, aunque el comando es más rápido y fiable." },
+
+  // Lección 11 — MCP en Claude Code
+  { lesson: "MCP (Code)", q: "¿Qué resuelve el MCP en Claude Code?", hint: "Tu contexto también vive fuera del código.", a: "Conecta Claude Code con herramientas y datos externos (bases de datos, apps, repos). Mucho de tu contexto vive fuera del codebase y MCP tiende ese puente." },
+  { lesson: "MCP (Code)", q: "Los dos tipos de servidores MCP y cómo se añaden", hint: "Remoto vs. local; un comando 'add'.", a: "HTTP (servicios remotos por red) y stdio (procesos locales en tu máquina). Se añaden con 'claude mcp add' y se gestionan con /mcp." },
+  { lesson: "MCP (Code)", q: "Los tres alcances (scopes) de un servidor MCP", hint: "Solo aquí, todos tus proyectos, o el equipo.", a: "Local (este proyecto, solo tú), user (todos tus proyectos) y project (un .mcp.json versionado para que todo el equipo tenga los mismos servidores)." },
+  { lesson: "MCP (Code)", q: "¿Cuál es el costo de contexto del MCP?", hint: "Cargan aunque no los uses.", a: "Cada servidor añade definiciones de herramientas a tu contexto aunque no las uses; con muchos servidores, esto come tu contexto disponible. Desactiva lo que no uses con /mcp." },
+  { lesson: "MCP (Code)", q: "Alternativas al MCP para ahorrar contexto (y el umbral del 10%)", hint: "CLI, Skills… y un cambio automático.", a: "Si hay equivalente CLI (gh, aws) es más eficiente; una Skill solo carga nombre y descripción. Si las herramientas MCP superan el 10% del contexto, Claude Code pasa a modo de búsqueda de herramientas." },
+
+  // Lección 12 — Hooks
+  { lesson: "Hooks", q: "¿Qué es un hook y qué lo hace único?", hint: "A diferencia de todo lo demás… siempre corre.", a: "Comandos que se ejecutan en puntos específicos del ciclo de vida de Claude Code. Lo único: son deterministas, siempre se ejecutan, sin excepción." },
+  { lesson: "Hooks", q: "Hook vs. instrucción en CLAUDE.md/prompt: ¿la diferencia?", hint: "Garantizar vs. sugerir.", a: "Un CLAUDE.md o prompt guía el comportamiento del modelo (a veces falla); un hook lo garantiza mecánicamente. Si algo debe ocurrir siempre sin falla, ponlo en un hook, no en un prompt." },
+  { lesson: "Hooks", q: "Los eventos de hooks disponibles", hint: "Antes/después de herramienta, al enviar prompt, al parar, al notificar.", a: "PreToolUse, PostToolUse, UserPromptSubmit, Stop y Notification. Se configuran con /hooks o en settings.json, con un matcher opcional." },
+  { lesson: "Hooks", q: "¿Cómo bloquea un hook PreToolUse? (códigos de salida)", hint: "0 sigue, 2 bloquea, otro es error suave.", a: "Recibe la herramienta como JSON; exit 0 procede, exit 2 bloquea (y su stderr vuelve a Claude como feedback), cualquier otro código es un error no bloqueante. Así impones reglas duras (bloquear rm -rf, commits a main)." },
+  { lesson: "Hooks", q: "¿Cómo compartes hooks con tu equipo?", hint: "Mismo patrón que Skills/MCP de proyecto.", a: "Los hooks en .claude/settings.json son a nivel de proyecto y se suben al repo, así todo el equipo los obtiene. Usa CLAUDE_PROJECT_DIR para referenciar scripts sin importar el directorio actual." },
+];
+
+const LESSONS = ["Todas", "Qué es Claude Code", "El bucle agéntico", "Instalación", "Tu primer prompt", "Explore→Plan→Code→Commit", "Gestión del contexto", "Code Review y git", "CLAUDE.md", "Subagentes", "Skills (Code)", "MCP (Code)", "Hooks"];
+
+const SCENARIOS = [
+  { s: "Quiero entender qué hace una función rara y de dónde viene un bug en un proyecto que heredé.", options: ["Leer y entender el codebase", "Ejecutar comandos", "Buscar en la web", "Editar archivos"], correct: "Leer y entender el codebase", why: "Pedirle a Claude Code que explique una función o rastree un bug es su capacidad de leer y entender tu código." },
+  { s: "Cambié el nombre de una función y necesito actualizar cada archivo que la usa.", options: ["Editar archivos en todo el proyecto", "Buscar en la web", "Ventana de contexto", "Pedir permiso"], correct: "Editar archivos en todo el proyecto", why: "Refactorizar y actualizar todas las referencias es la capacidad de editar archivos a lo largo del proyecto." },
+  { s: "Necesito correr los tests y, según el resultado, decidir el siguiente paso.", options: ["Ejecutar comandos de terminal", "Leer el codebase", "Buscar en la web", "Editar archivos"], correct: "Ejecutar comandos de terminal", why: "Correr tests o scripts y usar la salida para decidir qué hacer es ejecutar comandos de terminal." },
+  { s: "Claude Code necesita la referencia más reciente de una API que no está en mi proyecto.", options: ["Buscar en la web", "Ventana de contexto", "Ejecutar comandos", "Editar archivos"], correct: "Buscar en la web", why: "Cuando necesita documentación o referencias actualizadas, puede buscarlas en la web." },
+  { s: "Mi codebase es gigante y no cabe entero en la memoria de Claude de una sola vez.", options: ["Ventana de contexto", "Buscar en la web", "Pedir permiso", "Es un agente"], correct: "Ventana de contexto", why: "La ventana de contexto es su memoria de trabajo; por eso busca de forma estratégica sin cargar todo el código." },
+  { s: "Me preocupa que Claude haga un cambio destructivo sin que yo lo sepa.", options: ["Pide permiso por defecto", "Ventana de contexto", "Buscar en la web", "Es agéntico"], correct: "Pide permiso por defecto", why: "Por defecto pide permiso antes de ejecutar comandos o hacer cambios: siempre mantienes el control." },
+  { s: "Quiero que Claude arme primero un plan completo, sin tocar nada, antes de empezar a trabajar.", options: ["Modo plan", "Auto-aceptar", "Compactar contexto", "Buscar en la web"], correct: "Modo plan", why: "El modo plan usa herramientas de solo lectura para compilar un plan de acción antes de hacer cambios." },
+  { s: "Confío en la tarea y quiero que edite archivos sin preguntar, pero que aún confirme los comandos.", options: ["Auto-aceptar", "Modo plan", "Comportamiento por defecto", "Compactar"], correct: "Auto-aceptar", why: "Auto-aceptar edita archivos sin pedir permiso, pero los comandos de shell siguen requiriendo aprobación." },
+  { s: "Llevo una conversación larguísima y Claude empieza a resumir partes viejas para seguir cabiendo.", options: ["Compactar el contexto", "Modo plan", "Buscar en la web", "Tool call"], correct: "Compactar el contexto", why: "Al alcanzar el límite de la ventana, Claude Code compacta: elimina o resume para volver a un tamaño usable." },
+  { s: "Quiero trabajar remotamente sobre un proyecto que vive en un repositorio de GitHub.", options: ["Claude Code en la web", "Terminal", "Desktop en segundo plano", "JetBrains"], correct: "Claude Code en la web", why: "La versión web (claude.ai/code) está pensada para trabajar remotamente sobre repos de GitHub." },
+  { s: "Voy a pedir una funcionalidad grande de varios pasos y quiero revisar el enfoque antes de que toque el código.", options: ["Modo Plan", "Auto-aceptar", "Buscar en la web", "Compactar contexto"], correct: "Modo Plan", why: "El Modo Plan investiga con solo lectura, hace preguntas y devuelve un plan detallado antes de ejecutar: ideal para cambios complejos." },
+  { s: "Quiero alternar entre que Claude me pida permiso y que auto-acepte, sin salir de la sesión.", options: ["Shift + Tab", "Reiniciar el terminal", "Buscar en la web", "Compactar contexto"], correct: "Shift + Tab", why: "Shift + Tab cicla entre los modos (aprobación, auto-aceptar y Modo Plan) mientras trabajas." },
+  { s: "Estoy por subir mi código y quiero una revisión sin el sesgo que acumuló la sesión.", options: ["Subagente revisor de código", "Modo Plan", "Compactar contexto", "Auto-aceptar"], correct: "Subagente revisor de código", why: "Antes del commit, un subagente revisor aporta ojos frescos sin el sesgo del agente principal." },
+  { s: "Quiero que Claude confíe en si su trabajo quedó 'correcto' de forma objetiva.", options: ["Definir criterio de éxito y una suite de tests", "Auto-aceptar", "Buscar en la web", "Compactar contexto"], correct: "Definir criterio de éxito y una suite de tests", why: "Un criterio de éxito explícito y tests confiables le dan a Claude una fuente de verdad para validar sus resultados." },
+  { s: "Solo quiero entender cómo está armado un codebase, sin intención de cambiar nada.", options: ["Subagente de exploración", "Modo auto-aceptar", "Commit", "Compactar contexto"], correct: "Subagente de exploración", why: "Puedes correr el subagente de exploración (incluso fuera del Modo Plan) para un resumen general del codebase." },
+  { s: "Sigo en la misma funcionalidad, choco con el límite de contexto, pero necesito conservar lo trabajado.", options: ["/compact", "/clear", "/context", "Shift + Tab"], correct: "/compact", why: "/compact resume todo hasta ese punto y libera espacio manteniendo memoria de lo que hacías." },
+  { s: "Voy a empezar una funcionalidad totalmente nueva y no quiero que lo anterior meta sesgo.", options: ["/clear", "/compact", "/context", "Subagente"], correct: "/clear", why: "/clear empieza de cero sin memoria de la sesión previa; lo que quieras conservar entre sesiones va en CLAUDE.md." },
+  { s: "Quiero saber qué está ocupando más espacio en mi contexto ahora mismo.", options: ["/context", "/compact", "/clear", "Shift + Tab"], correct: "/context", why: "/context muestra el tamaño de tu contexto, las categorías que más ocupan y un gráfico del desglose." },
+  { s: "Terminé la feature y quiero hacer commit, push y abrir el PR de una sola vez.", options: ["La Skill /commit-push-pr", "/compact", "Subagente revisor", "--from-pr"], correct: "La Skill /commit-push-pr", why: "Esa Skill maneja commit, push y creación del PR en un solo paso (y puede avisar en Slack)." },
+  { s: "Dejé un PR hace días y ahora debo atender comentarios de revisión donde lo dejé.", options: ["claude --from-pr <número>", "/clear", "La Skill /commit-push-pr", "/context"], correct: "claude --from-pr <número>", why: "--from-pr retoma la sesión vinculada a ese PR para seguir justo donde quedaste." },
+  { s: "Me cansé de repetirle a Claude que use server actions en vez de rutas de API en cada sesión.", options: ["Guardar la regla en CLAUDE.md", "/clear", "Subagente revisor", "/context"], correct: "Guardar la regla en CLAUDE.md", why: "Pídele que guarde esa corrección en memoria (CLAUDE.md) y la próxima sesión ya la sabrá." },
+  { s: "Empiezo un proyecto nuevo y quiero que Claude genere un archivo de memoria base por mí.", options: ["/init", "/compact", "--from-pr", "Shift + Tab"], correct: "/init", why: "/init hace que Claude genere un CLAUDE.md por ti cuando estés listo para tenerlo." },
+  { s: "Quiero crear mi propio subagente eligiendo su propósito, herramientas y color.", options: ["/agents", "/init", "/compact", "--from-pr"], correct: "/agents", why: "/agents y 'Create new agent' te guían para definir alcance, propósito, herramientas y color del subagente." },
+  { s: "Necesito la respuesta a '¿dónde están los endpoints de auth?' sin llenar mi contexto con toda la búsqueda.", options: ["Delegar a un subagente", "/context", "Auto-aceptar", "--from-pr"], correct: "Delegar a un subagente", why: "El subagente explora en su ventana aislada y devuelve solo el resumen, manteniendo limpio tu contexto principal." },
+  { s: "Quiero que mis estándares de revisión de código se apliquen solos, sin invocarlos yo cada vez.", options: ["Una Skill", "Un comando slash", "/context", "--from-pr"], correct: "Una Skill", why: "Las Skills se activan automáticamente según el contexto; los comandos slash requieren que los invoques manualmente." },
+  { s: "Tengo instrucciones que rara vez aplican y no quiero que ocupen contexto en cada conversación.", options: ["Una Skill (carga bajo demanda)", "Ponerlas en CLAUDE.md", "/compact", "Auto-aceptar"], correct: "Una Skill (carga bajo demanda)", why: "CLAUDE.md carga en cada conversación; una Skill solo carga nombre y descripción, y el resto solo si se activa." },
+  { s: "Quiero que la guía de marca de mi equipo la tenga cualquiera que clone el repositorio.", options: ["Skill de proyecto (.claude/skills)", "Skill personal (~/.claude/skills)", "Un comando slash", "Memoria persistente"], correct: "Skill de proyecto (.claude/skills)", why: "Las Skills de proyecto viven en la raíz del repo y se comparten automáticamente con quien lo clone." },
+  { s: "Quiero que todo mi equipo tenga automáticamente los mismos servidores MCP al clonar el repo.", options: ["Scope project con .mcp.json", "Scope local", "Scope user", "Un comando slash"], correct: "Scope project con .mcp.json", why: "El scope project usa un .mcp.json versionado, así todos en el codebase obtienen los mismos servidores." },
+  { s: "Tengo muchos servidores MCP configurados y siento que se me agota el contexto disponible.", options: ["Desactivar los que no uses con /mcp", "/clear", "Memoria persistente", "--from-pr"], correct: "Desactivar los que no uses con /mcp", why: "Cada servidor añade definiciones de herramientas al contexto aunque no lo uses; /mcp te deja ver y desactivar los innecesarios." },
+  { s: "Necesito acciones de GitHub y quiero la opción que menos contexto consuma.", options: ["El CLI gh", "Un servidor MCP de GitHub", "Un comando slash", "Memoria persistente"], correct: "El CLI gh", why: "Si hay equivalente CLI (como gh), es más eficiente en contexto porque no añade definiciones de herramientas persistentes." },
+  { s: "Quiero que Prettier corra SIEMPRE tras cada edición, sin depender de que Claude se acuerde.", options: ["Un hook (PostToolUse)", "Una instrucción en CLAUDE.md", "Una Skill", "Un comando slash"], correct: "Un hook (PostToolUse)", why: "Los hooks son deterministas: siempre corren. CLAUDE.md solo lo sugiere y a veces falla. Si debe ocurrir sin falla, va en un hook." },
+  { s: "Quiero impedir de forma garantizada que se ejecuten comandos con rm -rf.", options: ["Un hook PreToolUse (exit 2)", "Modo aprobación", "Una nota en CLAUDE.md", "Un subagente"], correct: "Un hook PreToolUse (exit 2)", why: "Un PreToolUse puede bloquear la acción antes de ejecutarla devolviendo exit code 2; así impones reglas duras garantizadas." },
+  { s: "Quiero que todo mi equipo tenga los mismos hooks automáticamente al clonar el repo.", options: [".claude/settings.json versionado", "~/.claude personal", "Un comando slash", "Memoria persistente"], correct: ".claude/settings.json versionado", why: "Los hooks a nivel de proyecto viven en .claude/settings.json y se suben al repo, así el equipo los obtiene automáticamente." },
+];
+
+const C = { ink:"#12203a", sub:"#586178", paper:"#f4f6f9", card:"#ffffff", line:"#dde3ec", accent:"#c15f3c", accentSoft:"#f7e9e2", amber:"#a86a1f", amberSoft:"#faf1de", red:"#b23b3b", redSoft:"#f7e9e9" };
+const btnBase = { fontFamily:"system-ui, sans-serif", fontSize:13.5, fontWeight:600, borderRadius:10, padding:"9px 16px", cursor:"pointer" };
+const btnPrimary = { ...btnBase, background:C.accent, color:"#fff", border:`1px solid ${C.accent}` };
+const btnGhost = { ...btnBase, background:"#fff", color:C.sub, border:`1px solid ${C.line}` };
+const rateBtn = (color) => ({ ...btnBase, flex:1, background:"#fff", color, border:`1px solid ${color}` });
+
+function App() {
+  const [mode, setMode] = useState("repaso");
+  return (
+    <div style={{ background:C.paper, minHeight:"100vh", padding:"28px 18px", fontFamily:"'Georgia', serif" }}>
+      <div style={{ maxWidth:620, margin:"0 auto" }}>
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontFamily:"system-ui, sans-serif", fontSize:12, letterSpacing:"0.14em", textTransform:"uppercase", color:C.accent, fontWeight:700 }}>Estudio · Claude Code 101</div>
+          <h1 style={{ margin:"4px 0 0", fontSize:26, color:C.ink, fontWeight:700 }}>{mode === "repaso" ? "Lo que aprendes de Claude Code" : "Aplica los conceptos"}</h1>
+        </div>
+        <div style={{ display:"flex", gap:8, marginBottom:18, fontFamily:"system-ui, sans-serif", background:"#e6eaf0", padding:4, borderRadius:12, width:"fit-content" }}>
+          {[["repaso","📇 Repaso"],["escenarios","🧭 Escenarios"]].map(([m,label]) => (
+            <button key={m} onClick={() => setMode(m)} style={{ ...btnBase, background:mode===m?"#fff":"transparent", color:mode===m?C.ink:C.sub, border:mode===m?`1px solid ${C.line}`:"1px solid transparent", boxShadow:mode===m?"0 1px 2px rgba(18,32,58,.06)":"none" }}>{label}</button>
+          ))}
+        </div>
+        {mode === "repaso" ? <ReviewMode /> : <ScenarioMode />}
+      </div>
+    </div>
+  );
+}
+
+function ReviewMode() {
+  const [filter, setFilter] = useState("Todas");
+  const [order, setOrder] = useState(() => DECK.map((_, i) => i));
+  const [pos, setPos] = useState(0);
+  const [hintShown, setHintShown] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const [scores, setScores] = useState({});
+  const pool = useMemo(() => order.filter((i) => filter === "Todas" || DECK[i].lesson === filter), [order, filter]);
+  const safePos = Math.min(pos, Math.max(pool.length - 1, 0));
+  const idx = pool[safePos];
+  const card = DECK[idx];
+  const resetCardView = () => { setHintShown(false); setRevealed(false); };
+  const goNext = () => { resetCardView(); setPos((p) => (p + 1 < pool.length ? p + 1 : p)); };
+  const rate = (val) => { setScores((s) => ({ ...s, [idx]: val })); setTimeout(goNext, 180); };
+  const shuffle = () => { const s=[...order]; for(let i=s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];} setOrder(s); setPos(0); resetCardView(); };
+  const reset = () => { setScores({}); setPos(0); resetCardView(); };
+  const answered = pool.filter((i) => scores[i]).length;
+  const known = pool.filter((i) => scores[i] === "si").length;
+  const progress = pool.length ? Math.round((answered / pool.length) * 100) : 0;
+  const done = pool.length > 0 && answered === pool.length;
+  return (
+    <div>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:16, fontFamily:"system-ui, sans-serif" }}>
+        {LESSONS.map((l) => (
+          <button key={l} onClick={() => { setFilter(l); setPos(0); resetCardView(); }} style={{ border:`1px solid ${filter===l?C.accent:C.line}`, background:filter===l?C.accent:C.card, color:filter===l?"#fff":C.sub, borderRadius:999, padding:"6px 13px", fontSize:12.5, cursor:"pointer", fontWeight:600 }}>{l}</button>
+        ))}
+      </div>
+      <div style={{ fontFamily:"system-ui, sans-serif", marginBottom:14 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", fontSize:12.5, color:C.sub, marginBottom:6 }}><span>{answered} de {pool.length} repasadas</span><span>{known} dominadas ✓</span></div>
+        <div style={{ height:6, background:C.line, borderRadius:999, overflow:"hidden" }}><div style={{ height:"100%", width:`${progress}%`, background:C.accent, transition:"width .3s ease" }} /></div>
+      </div>
+      {done ? (
+        <div style={{ background:C.card, border:`1px solid ${C.line}`, borderRadius:16, padding:"38px 26px", textAlign:"center" }}>
+          <div style={{ fontSize:34 }}>🎯</div>
+          <h2 style={{ color:C.ink, fontSize:21, margin:"10px 0 4px" }}>¡Ronda completa!</h2>
+          <p style={{ fontFamily:"system-ui, sans-serif", color:C.sub, fontSize:14.5, margin:0 }}>Dominaste {known} de {pool.length}. Baraja para repasar las que aún no se afianzan.</p>
+          <div style={{ display:"flex", gap:10, justifyContent:"center", marginTop:20 }}>
+            <button onClick={shuffle} style={btnPrimary}>Barajar y repasar</button>
+            <button onClick={reset} style={btnGhost}>Empezar de cero</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ background:C.card, border:`1px solid ${C.line}`, borderRadius:16, padding:"26px 24px", minHeight:230, display:"flex", flexDirection:"column", boxShadow:"0 1px 2px rgba(18,32,58,.04)" }}>
+          <div style={{ fontFamily:"system-ui, sans-serif", fontSize:11.5, letterSpacing:"0.1em", textTransform:"uppercase", color:C.amber, fontWeight:700, marginBottom:14 }}>{card.lesson} · {safePos+1}/{pool.length}</div>
+          <div style={{ fontSize:20, color:C.ink, lineHeight:1.4, fontWeight:700 }}>{card.q}</div>
+          {hintShown && !revealed && (<div style={{ marginTop:16, background:C.amberSoft, borderLeft:`3px solid ${C.amber}`, borderRadius:8, padding:"12px 14px", fontFamily:"system-ui, sans-serif", fontSize:14.5, color:C.ink, lineHeight:1.5 }}><span style={{ fontWeight:700, color:C.amber }}>Pista: </span>{card.hint}</div>)}
+          {revealed && (<div style={{ marginTop:16, background:C.accentSoft, borderRadius:10, padding:"14px 16px", fontFamily:"system-ui, sans-serif", fontSize:15, color:C.ink, lineHeight:1.55 }}>{card.a}</div>)}
+          {!hintShown && !revealed && (<div style={{ marginTop:"auto", fontFamily:"system-ui, sans-serif", fontSize:13, color:C.sub, fontStyle:"italic" }}>Piensa tu respuesta primero. Usa una pista solo si te atascas.</div>)}
+          {!revealed && (
+            <div style={{ marginTop:18, display:"flex", gap:8, fontFamily:"system-ui, sans-serif" }}>
+              {!hintShown && (<button onClick={() => setHintShown(true)} style={{ ...btnBase, background:"#fff", color:C.amber, border:`1px solid ${C.amber}`, flex:1 }}>Dame una pista</button>)}
+              <button onClick={() => setRevealed(true)} style={{ ...btnPrimary, flex:1 }}>Ver respuesta</button>
+            </div>
+          )}
+          {revealed && (
+            <div style={{ marginTop:18, fontFamily:"system-ui, sans-serif" }}>
+              <div style={{ fontSize:12.5, color:C.sub, marginBottom:8 }}>¿Cómo te fue?</div>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => rate("no")} style={rateBtn(C.red)}>No la supe</button>
+                <button onClick={() => rate("casi")} style={rateBtn(C.amber)}>Casi</button>
+                <button onClick={() => rate("si")} style={rateBtn(C.accent)}>¡La supe!</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {!done && (<div style={{ display:"flex", justifyContent:"space-between", marginTop:16, fontFamily:"system-ui, sans-serif" }}><button onClick={shuffle} style={btnGhost}>Barajar</button><button onClick={goNext} style={btnGhost}>Saltar →</button></div>)}
+    </div>
+  );
+}
+
+function ScenarioMode() {
+  const mk = () => { const s = SCENARIOS.map((_, i) => i); for (let i=s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];} return s; };
+  const [order, setOrder] = useState(mk);
+  const [pos, setPos] = useState(0);
+  const [picked, setPicked] = useState(null);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [answeredCount, setAnsweredCount] = useState(0);
+  const [finished, setFinished] = useState(false);
+  const sc = SCENARIOS[order[pos]];
+  const choose = (opt) => { if (picked) return; setPicked(opt); setAnsweredCount((n) => n + 1); if (opt === sc.correct) setCorrectCount((n) => n + 1); };
+  const next = () => { if (pos + 1 < order.length) { setPos(pos + 1); setPicked(null); } else setFinished(true); };
+  const restart = () => { setOrder(mk()); setPos(0); setPicked(null); setCorrectCount(0); setAnsweredCount(0); setFinished(false); };
+  const progress = Math.round((answeredCount / SCENARIOS.length) * 100);
+  if (finished) {
+    return (
+      <div style={{ background:C.card, border:`1px solid ${C.line}`, borderRadius:16, padding:"38px 26px", textAlign:"center" }}>
+        <div style={{ fontSize:34 }}>{correctCount === SCENARIOS.length ? "🏆" : "🧭"}</div>
+        <h2 style={{ color:C.ink, fontSize:21, margin:"10px 0 4px" }}>Acertaste {correctCount} de {SCENARIOS.length}</h2>
+        <p style={{ fontFamily:"system-ui, sans-serif", color:C.sub, fontSize:14.5, margin:0 }}>{correctCount === SCENARIOS.length ? "¡Dominas los conceptos de Claude Code!" : "Repite para afinar cada concepto."}</p>
+        <button onClick={restart} style={{ ...btnPrimary, marginTop:20 }}>Jugar de nuevo</button>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div style={{ fontFamily:"system-ui, sans-serif", marginBottom:14 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", fontSize:12.5, color:C.sub, marginBottom:6 }}><span>Escenario {pos + 1} de {SCENARIOS.length}</span><span>{correctCount} aciertos ✓</span></div>
+        <div style={{ height:6, background:C.line, borderRadius:999, overflow:"hidden" }}><div style={{ height:"100%", width:`${progress}%`, background:C.accent, transition:"width .3s ease" }} /></div>
+      </div>
+      <div style={{ background:C.card, border:`1px solid ${C.line}`, borderRadius:16, padding:"26px 24px", boxShadow:"0 1px 2px rgba(18,32,58,.04)" }}>
+        <div style={{ fontFamily:"system-ui, sans-serif", fontSize:11.5, letterSpacing:"0.1em", textTransform:"uppercase", color:C.amber, fontWeight:700, marginBottom:14 }}>¿Qué concepto aplica?</div>
+        <div style={{ fontSize:19, color:C.ink, lineHeight:1.45, fontWeight:700, marginBottom:18 }}>{sc.s}</div>
+        <div style={{ display:"flex", flexDirection:"column", gap:9, fontFamily:"system-ui, sans-serif" }}>
+          {sc.options.map((opt) => {
+            let bg = "#fff", border = C.line, color = C.ink;
+            if (picked) {
+              if (opt === sc.correct) { bg = C.accentSoft; border = C.accent; color = C.accent; }
+              else if (opt === picked) { bg = C.redSoft; border = C.red; color = C.red; }
+              else { color = C.sub; }
+            }
+            return (<button key={opt} onClick={() => choose(opt)} disabled={!!picked} style={{ textAlign:"left", background:bg, border:`1px solid ${border}`, color, borderRadius:10, padding:"12px 15px", fontSize:14.5, fontWeight:600, cursor:picked?"default":"pointer" }}>{opt}{picked && opt===sc.correct ? "  ✓" : ""}{picked && opt===picked && opt!==sc.correct ? "  ✕" : ""}</button>);
+          })}
+        </div>
+        {picked && (<div style={{ marginTop:16, background:picked===sc.correct?C.accentSoft:C.amberSoft, borderRadius:10, padding:"13px 15px", fontFamily:"system-ui, sans-serif", fontSize:14, color:C.ink, lineHeight:1.5 }}><strong>{picked===sc.correct?"¡Correcto! ":`La mejor opción es ${sc.correct}. `}</strong>{sc.why}</div>)}
+        {picked && (<button onClick={next} style={{ ...btnPrimary, marginTop:16, width:"100%" }}>{pos + 1 < order.length ? "Siguiente escenario →" : "Ver resultado"}</button>)}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

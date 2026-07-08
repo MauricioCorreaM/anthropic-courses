@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mazo de repaso — Lecciones de Claude</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  html, body { margin: 0; background: #f6f5f1; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+const DECK = [
+  { lesson: "Chat · Cowork · Code", q: "¿Para qué está optimizado Chat?", hint: "Piensa en velocidad y en conversación de ida y vuelta.", a: "Intercambios rápidos: preguntas, lluvia de ideas, borradores iterativos y aprender conversando." },
+  { lesson: "Chat · Cowork · Code", q: "¿Para qué sirve Cowork?", hint: "La clave es 'muchas fuentes' y algo terminado.", a: "Trabajo complejo y sostenido: reunir información de muchas fuentes, analizarla y producir entregables terminados." },
+  { lesson: "Chat · Cowork · Code", q: "¿Para qué está pensado Code?", hint: "Tiene que ver con programar.", a: "Construir software: escribir, probar, ejecutar y desplegar código dentro de tu proyecto." },
+  { lesson: "Chat · Cowork · Code", q: "¿Qué son los subagentes?", hint: "Trabajan en paralelo, en segundo plano.", a: "Trabajadores en segundo plano que Claude activa para resolver partes de una tarea en paralelo y luego combina los resultados." },
+  { lesson: "Chat · Cowork · Code", q: "Los tres modos de interacción de Code", hint: "Uno pregunta, uno aplica, uno planea.", a: "Ask (propone y espera tu aprobación), Code (aplica cambios pero pregunta antes de comandos) y Plan (traza todo el enfoque primero)." },
+  { lesson: "Proyectos", q: "¿Qué es un proyecto?", hint: "Un espacio con memoria propia.", a: "Un espacio de trabajo autónomo con su propia memoria, historial, base de conocimiento e instrucciones." },
+  { lesson: "Proyectos", q: "¿Qué hace la base de conocimiento?", hint: "Evita volver a subir los mismos archivos cada vez.", a: "Guarda documentos que Claude consulta en todos los chats del proyecto, sin volver a subirlos cada vez." },
+  { lesson: "Proyectos", q: "¿Qué es RAG y cuándo se activa?", hint: "Aparece cuando hay demasiado contenido; amplía la capacidad.", a: "Recuperación aumentada: cuando el conocimiento se acerca al límite del contexto, Claude busca solo lo relevante y amplía la capacidad hasta 10x." },
+  { lesson: "Proyectos", q: "Los tres niveles de permiso al compartir", hint: "Van de solo mirar hasta controlarlo todo.", a: "Ver (solo lectura), Editar (colaboración total) y Propietario (controla todo, incluido quién accede)." },
+  { lesson: "Proyectos", q: "¿Por qué nombrar bien los archivos?", hint: "Claude los lee para encontrar lo correcto.", a: "Claude usa los nombres para entender y encontrar la información correcta: 'Q4-2025-Ventas.pdf' mejor que 'reporte.pdf'." },
+  { lesson: "Artifacts", q: "¿Qué es un artifact?", hint: "Vive en su propia ventana, aparte del chat.", a: "Una salida independiente e interactiva que Claude crea en una ventana propia, junto al chat, lista para usar." },
+  { lesson: "Artifacts", q: "¿Cuándo crea Claude un artifact?", hint: "Piensa en tamaño (+15 líneas) y en reutilizar.", a: "Cuando el contenido es significativo y autónomo (normalmente +15 líneas) y querrás editarlo, reutilizarlo o consultarlo después." },
+  { lesson: "Artifacts", q: "Tipos de artifacts", hint: "Desde documentos hasta cosas interactivas.", a: "Documentos, fragmentos de código, páginas HTML, imágenes SVG, diagramas Mermaid y componentes React interactivos." },
+  { lesson: "Artifacts", q: "Las tres formas de compartir", hint: "Una es personal, una interna, una pública.", a: "Copiar o descargar, compartir dentro de tu organización, o publicar con enlace público." },
+  { lesson: "Artifacts", q: "Al publicar un artifact, ¿qué pasa con tu chat?", hint: "Tu conversación no se ve afectada.", a: "Sigue privado. Solo la versión seleccionada se hace pública, y otros pueden verla o 'remezclarla'." },
+  { lesson: "Skills", q: "¿Qué es una Skill?", hint: "Es la 'receta' del cómo hacer una tarea.", a: "Un paquete de experiencia: una carpeta de instrucciones, scripts y recursos que Claude carga dinámicamente para ejecutar una tarea especializada de forma repetible." },
+  { lesson: "Skills", q: "Los dos tipos de Skills", hint: "Unas las hace Anthropic, otras las haces tú.", a: "De Anthropic (creadas y mantenidas por Anthropic, se activan solas) y personalizadas (las creas tú o tu organización para flujos propios)." },
+  { lesson: "Skills", q: "¿Qué necesitas activar para usar Skills?", hint: "Tiene que ver con el entorno de código.", a: "La ejecución de código y creación de archivos, porque las Skills funcionan en el entorno seguro y aislado de Claude." },
+  { lesson: "Skills", q: "¿Por qué hay que tener cuidado con las Skills?", hint: "Pueden contener algo que se ejecuta.", a: "Pueden incluir código ejecutable: instala solo las personalizadas de fuentes confiables y revisa su contenido antes de usarlas." },
+  { lesson: "Skills", q: "¿Cómo se crea una Skill personalizada?", hint: "No hace falta programar; solo hablar.", a: "Conversando con Claude, sin escribir código: le dices qué quieres, te entrevista, subes materiales de referencia y él genera el archivo listo para guardar." },
+  { lesson: "Skills", q: "Diferencia clave entre Proyectos y Skills", hint: "Uno guarda el 'qué', otra el 'cómo'.", a: "Los proyectos almacenan conocimiento (el 'qué'); las Skills ejecutan tareas (el 'cómo'). Se complementan." },
+  { lesson: "Connectors", q: "¿Qué hace un conector?", hint: "Le da a Claude acceso a tus herramientas y datos de siempre.", a: "Da a Claude acceso a las herramientas, datos y contexto que usas a diario, para que trabaje con tu información real en vez de empezar de cero." },
+  { lesson: "Connectors", q: "¿Qué es el MCP y con qué se compara?", hint: "Un estándar universal… como cierto puerto físico.", a: "El Model Context Protocol: un estándar abierto y universal que conecta a Claude con muchas apps por una sola interfaz. Es como el 'USB-C para la IA'." },
+  { lesson: "Connectors", q: "Los dos tipos de conectores", hint: "Unos viven en la nube, otros en tu computadora.", a: "Web (servicios en la nube como Google Drive, Slack, Notion) y desktop extensions (corren localmente con la app de escritorio y acceden a archivos y apps nativas)." },
+  { lesson: "Connectors", q: "Pasos para conectar un servicio web", hint: "Encontrarlo, iniciar sesión, autorizar…", a: "Encontrar el conector, hacer clic en Conectar, autenticarte con tu login, revisar y autorizar los permisos, y probar la conexión." },
+  { lesson: "Connectors", q: "'Claude ve lo que tú ves', ¿qué significa?", hint: "No accede al buzón de tu jefe.", a: "Claude solo accede a los datos a los que tú tienes acceso. Conectar tu correo no le da el de tu jefe, solo el tuyo." },
+  { lesson: "Connectors", q: "Las tres ideas de seguridad de los conectores", hint: "Acotado, ves-lo-que-ve, y se puede quitar.", a: "Acceso acotado (solo lo necesario, con permisos ajustables), Claude ve lo que tú ves, y es revocable en cualquier momento." },
+];
+
+const LESSONS = ["Todas", "Chat · Cowork · Code", "Proyectos", "Artifacts", "Skills", "Connectors"];
+
+const C = { ink:"#1c2433", sub:"#5c6675", paper:"#f6f5f1", card:"#ffffff", line:"#e4e2da", accent:"#2f6f5e", accentSoft:"#e7f0ec", amber:"#b7791f", amberSoft:"#faf1de" };
+
+const btnBase = { fontFamily:"system-ui, sans-serif", fontSize:13.5, fontWeight:600, borderRadius:10, padding:"9px 16px", cursor:"pointer" };
+const btnPrimary = { ...btnBase, background:C.accent, color:"#fff", border:`1px solid ${C.accent}` };
+const btnGhost = { ...btnBase, background:"#fff", color:C.sub, border:`1px solid ${C.line}` };
+const rateBtn = (color) => ({ ...btnBase, flex:1, background:"#fff", color, border:`1px solid ${color}` });
+
+function App() {
+  const [filter, setFilter] = useState("Todas");
+  const [order, setOrder] = useState(() => DECK.map((_, i) => i));
+  const [pos, setPos] = useState(0);
+  const [hintShown, setHintShown] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const [scores, setScores] = useState({});
+
+  const pool = useMemo(() => order.filter((i) => filter === "Todas" || DECK[i].lesson === filter), [order, filter]);
+  const safePos = Math.min(pos, Math.max(pool.length - 1, 0));
+  const idx = pool[safePos];
+  const card = DECK[idx];
+
+  const resetCardView = () => { setHintShown(false); setRevealed(false); };
+  const goNext = () => { resetCardView(); setPos((p) => (p + 1 < pool.length ? p + 1 : p)); };
+  const rate = (val) => { setScores((s) => ({ ...s, [idx]: val })); setTimeout(goNext, 180); };
+  const shuffle = () => { const s=[...order]; for(let i=s.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]];} setOrder(s); setPos(0); resetCardView(); };
+  const reset = () => { setScores({}); setPos(0); resetCardView(); };
+
+  const answered = pool.filter((i) => scores[i]).length;
+  const known = pool.filter((i) => scores[i] === "si").length;
+  const progress = pool.length ? Math.round((answered / pool.length) * 100) : 0;
+  const done = pool.length > 0 && answered === pool.length;
+
+  return (
+    <div style={{ background:C.paper, minHeight:"100vh", padding:"28px 18px", fontFamily:"'Georgia', serif" }}>
+      <div style={{ maxWidth:620, margin:"0 auto" }}>
+        <div style={{ marginBottom:18 }}>
+          <div style={{ fontFamily:"system-ui, sans-serif", fontSize:12, letterSpacing:"0.14em", textTransform:"uppercase", color:C.accent, fontWeight:700 }}>Mazo de repaso</div>
+          <h1 style={{ margin:"4px 0 0", fontSize:26, color:C.ink, fontWeight:700 }}>Lo que aprendiste de Claude</h1>
+        </div>
+
+        <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:16, fontFamily:"system-ui, sans-serif" }}>
+          {LESSONS.map((l) => (
+            <button key={l} onClick={() => { setFilter(l); setPos(0); resetCardView(); }}
+              style={{ border:`1px solid ${filter===l?C.accent:C.line}`, background:filter===l?C.accent:C.card, color:filter===l?"#fff":C.sub, borderRadius:999, padding:"6px 13px", fontSize:12.5, cursor:"pointer", fontWeight:600 }}>{l}</button>
+          ))}
+        </div>
+
+        <div style={{ fontFamily:"system-ui, sans-serif", marginBottom:14 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:12.5, color:C.sub, marginBottom:6 }}>
+            <span>{answered} de {pool.length} repasadas</span><span>{known} dominadas ✓</span>
+          </div>
+          <div style={{ height:6, background:C.line, borderRadius:999, overflow:"hidden" }}>
+            <div style={{ height:"100%", width:`${progress}%`, background:C.accent, transition:"width .3s ease" }} />
+          </div>
+        </div>
+
+        {done ? (
+          <div style={{ background:C.card, border:`1px solid ${C.line}`, borderRadius:16, padding:"38px 26px", textAlign:"center" }}>
+            <div style={{ fontSize:34 }}>🎯</div>
+            <h2 style={{ color:C.ink, fontSize:21, margin:"10px 0 4px" }}>¡Ronda completa!</h2>
+            <p style={{ fontFamily:"system-ui, sans-serif", color:C.sub, fontSize:14.5, margin:0 }}>Dominaste {known} de {pool.length}. Baraja para repasar las que aún no se afianzan.</p>
+            <div style={{ display:"flex", gap:10, justifyContent:"center", marginTop:20 }}>
+              <button onClick={shuffle} style={btnPrimary}>Barajar y repasar</button>
+              <button onClick={reset} style={btnGhost}>Empezar de cero</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ background:C.card, border:`1px solid ${C.line}`, borderRadius:16, padding:"26px 24px", minHeight:230, display:"flex", flexDirection:"column", boxShadow:"0 1px 2px rgba(28,36,51,.04)" }}>
+            <div style={{ fontFamily:"system-ui, sans-serif", fontSize:11.5, letterSpacing:"0.1em", textTransform:"uppercase", color:C.amber, fontWeight:700, marginBottom:14 }}>{card.lesson} · {safePos+1}/{pool.length}</div>
+            <div style={{ fontSize:20, color:C.ink, lineHeight:1.4, fontWeight:700 }}>{card.q}</div>
+
+            {hintShown && !revealed && (
+              <div style={{ marginTop:16, background:C.amberSoft, borderLeft:`3px solid ${C.amber}`, borderRadius:8, padding:"12px 14px", fontFamily:"system-ui, sans-serif", fontSize:14.5, color:C.ink, lineHeight:1.5 }}>
+                <span style={{ fontWeight:700, color:C.amber }}>Pista: </span>{card.hint}
+              </div>
+            )}
+            {revealed && (
+              <div style={{ marginTop:16, background:C.accentSoft, borderRadius:10, padding:"14px 16px", fontFamily:"system-ui, sans-serif", fontSize:15, color:C.ink, lineHeight:1.55 }}>{card.a}</div>
+            )}
+            {!hintShown && !revealed && (
+              <div style={{ marginTop:"auto", fontFamily:"system-ui, sans-serif", fontSize:13, color:C.sub, fontStyle:"italic" }}>Piensa tu respuesta primero. Usa una pista solo si te atascas.</div>
+            )}
+
+            {!revealed && (
+              <div style={{ marginTop:18, display:"flex", gap:8, fontFamily:"system-ui, sans-serif" }}>
+                {!hintShown && (<button onClick={() => setHintShown(true)} style={{ ...btnBase, background:"#fff", color:C.amber, border:`1px solid ${C.amber}`, flex:1 }}>Dame una pista</button>)}
+                <button onClick={() => setRevealed(true)} style={{ ...btnPrimary, flex:1 }}>Ver respuesta</button>
+              </div>
+            )}
+            {revealed && (
+              <div style={{ marginTop:18, fontFamily:"system-ui, sans-serif" }}>
+                <div style={{ fontSize:12.5, color:C.sub, marginBottom:8 }}>¿Cómo te fue?</div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <button onClick={() => rate("no")} style={rateBtn("#b23b3b")}>No la supe</button>
+                  <button onClick={() => rate("casi")} style={rateBtn(C.amber)}>Casi</button>
+                  <button onClick={() => rate("si")} style={rateBtn(C.accent)}>¡La supe!</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!done && (
+          <div style={{ display:"flex", justifyContent:"space-between", marginTop:16, fontFamily:"system-ui, sans-serif" }}>
+            <button onClick={shuffle} style={btnGhost}>Barajar</button>
+            <button onClick={goNext} style={btnGhost}>Saltar →</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
